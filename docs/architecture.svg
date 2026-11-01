@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 660" width="960" height="660" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#334155"/>
+    </marker>
+    <marker id="arrow-muted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#94a3b8"/>
+    </marker>
+    <style>
+      .box { fill: #ffffff; stroke: #334155; stroke-width: 1.5; }
+      .title { font-size: 14px; font-weight: 600; fill: #0f172a; }
+      .sub { font-size: 12px; fill: #475569; }
+      .label { font-size: 11.5px; fill: #334155; }
+      .muted { font-size: 11.5px; fill: #64748b; }
+      .flow { stroke: #334155; stroke-width: 1.6; fill: none; marker-end: url(#arrow); }
+      .support { stroke: #94a3b8; stroke-width: 1.4; fill: none; stroke-dasharray: 5 4; marker-end: url(#arrow-muted); }
+    </style>
+  </defs>
+
+  <!-- Background so the diagram stays readable in dark mode -->
+  <rect width="960" height="660" fill="#ffffff"/>
+
+  <text x="30" y="38" font-size="19" font-weight="700" fill="#0f172a">IHub activity statement: AWS run plan</text>
+
+  <!-- Callers -->
+  <rect class="box" x="30" y="110" width="170" height="60" rx="8"/>
+  <text class="title" x="115" y="135" text-anchor="middle">Upstream product</text>
+  <text class="title" x="115" y="153" text-anchor="middle">systems</text>
+
+  <rect class="box" x="30" y="350" width="170" height="60" rx="8"/>
+  <text class="title" x="115" y="375" text-anchor="middle">Statement consumers</text>
+  <text class="sub" x="115" y="393" text-anchor="middle">e.g. intermediary portal</text>
+
+  <!-- Queue and load balancer -->
+  <rect class="box" x="240" y="110" width="150" height="60" rx="8" style="fill:#fff7ed;stroke:#c2410c"/>
+  <text class="title" x="315" y="135" text-anchor="middle">Amazon SQS</text>
+  <text class="sub" x="315" y="153" text-anchor="middle">activity queue</text>
+
+  <rect class="box" x="245" y="220" width="140" height="44" rx="8" style="fill:#fff7ed;stroke:#c2410c"/>
+  <text class="title" x="315" y="247" text-anchor="middle">Dead-letter queue</text>
+
+  <rect class="box" x="240" y="350" width="170" height="60" rx="8" style="fill:#f5f3ff;stroke:#6d28d9"/>
+  <text class="title" x="325" y="375" text-anchor="middle">Application Load</text>
+  <text class="title" x="325" y="393" text-anchor="middle">Balancer (ALB)</text>
+
+  <!-- VPC -->
+  <rect x="440" y="62" width="500" height="430" rx="12" fill="none" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="6 5"/>
+  <text class="muted" x="454" y="84">VPC, spread across two Availability Zones</text>
+
+  <!-- ECS service -->
+  <rect x="460" y="100" width="210" height="372" rx="10" fill="#eff6ff" stroke="#1d4ed8" stroke-width="1.2"/>
+  <text class="title" x="474" y="123">ECS service on Fargate</text>
+  <text class="sub" x="474" y="141">min 2 tasks, auto scaling</text>
+
+  <rect class="box" x="480" y="165" width="170" height="70" rx="8"/>
+  <text class="title" x="565" y="194" text-anchor="middle">IHub API task</text>
+  <text class="sub" x="565" y="213" text-anchor="middle">Availability Zone A</text>
+
+  <rect class="box" x="480" y="320" width="170" height="70" rx="8"/>
+  <text class="title" x="565" y="349" text-anchor="middle">IHub API task</text>
+  <text class="sub" x="565" y="368" text-anchor="middle">Availability Zone B</text>
+
+  <text class="muted" x="565" y="268" text-anchor="middle">fails /health/live:</text>
+  <text class="muted" x="565" y="284" text-anchor="middle">ECS replaces the task</text>
+
+  <!-- RDS -->
+  <rect x="700" y="100" width="220" height="372" rx="10" fill="#f0fdf4" stroke="#15803d" stroke-width="1.2"/>
+  <text class="title" x="714" y="123">RDS PostgreSQL</text>
+  <text class="sub" x="714" y="141">Multi-AZ</text>
+
+  <rect class="box" x="725" y="165" width="170" height="70" rx="8"/>
+  <text class="title" x="810" y="194" text-anchor="middle">Primary</text>
+  <text class="sub" x="810" y="213" text-anchor="middle">Availability Zone A</text>
+
+  <rect class="box" x="725" y="320" width="170" height="70" rx="8"/>
+  <text class="title" x="810" y="349" text-anchor="middle">Standby</text>
+  <text class="sub" x="810" y="368" text-anchor="middle">Availability Zone B</text>
+
+  <!-- Supporting services -->
+  <rect class="box" x="460" y="540" width="210" height="80" rx="8" style="fill:#fdf2f8;stroke:#be185d"/>
+  <text class="title" x="565" y="566" text-anchor="middle">Amazon CloudWatch</text>
+  <text class="sub" x="565" y="585" text-anchor="middle">Logs (with TraceId), Metrics</text>
+  <text class="sub" x="565" y="603" text-anchor="middle">Alarms to on-call</text>
+
+  <rect class="box" x="700" y="540" width="220" height="80" rx="8" style="fill:#fefce8;stroke:#a16207"/>
+  <text class="title" x="810" y="572" text-anchor="middle">AWS Secrets Manager</text>
+  <text class="sub" x="810" y="591" text-anchor="middle">database connection string</text>
+
+  <!-- Ingestion flow -->
+  <line class="flow" x1="200" y1="140" x2="238" y2="140"/>
+  <line class="flow" x1="315" y1="170" x2="315" y2="218"/>
+  <text class="muted" x="323" y="198">after retries</text>
+  <path class="flow" d="M390,140 L445,140 L445,190 L478,190"/>
+  <text class="label" x="439" y="158" text-anchor="end">consume,</text>
+  <text class="label" x="439" y="172" text-anchor="end">upsert</text>
+
+  <!-- Statement flow -->
+  <line class="flow" x1="200" y1="380" x2="238" y2="380"/>
+  <text class="label" x="204" y="372">HTTPS</text>
+  <path class="flow" d="M410,370 L448,370 L448,215 L478,215"/>
+  <path class="flow" d="M410,388 L448,388 L448,355 L478,355"/>
+  <text class="muted" x="325" y="432" text-anchor="middle">only routes to tasks</text>
+  <text class="muted" x="325" y="448" text-anchor="middle">passing /health/ready</text>
+
+  <!-- Database access -->
+  <line class="flow" x1="650" y1="200" x2="723" y2="200"/>
+  <path class="flow" d="M650,355 L688,355 L688,222 L723,222"/>
+  <line class="support" x1="810" y1="235" x2="810" y2="318"/>
+  <text class="muted" x="818" y="272">synchronous</text>
+  <text class="muted" x="818" y="288">replica, failover</text>
+
+  <!-- Supporting links -->
+  <line class="support" x1="565" y1="472" x2="565" y2="538"/>
+  <text class="muted" x="573" y="510">logs, metrics</text>
+  <path class="support" d="M640,472 L640,505 L760,505 L760,538"/>
+  <text class="muted" x="680" y="524">reads secrets</text>
+
+  <!-- Legend -->
+  <line x1="30" y1="640" x2="60" y2="640" stroke="#334155" stroke-width="1.6"/>
+  <text class="muted" x="68" y="644">request and data flow</text>
+  <line x1="210" y1="640" x2="240" y2="640" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="5 4"/>
+  <text class="muted" x="248" y="644">supporting</text>
+</svg>

@@ -112,7 +112,66 @@ _To be completed._
 
 ## Task 3: AWS run plan
 
-_To be completed._
+My hosting experience is mainly with Azure rather than AWS. In practice my first step would be to
+follow whatever hosting platform and conventions the team already uses. Below is how I'd run this
+service, described in Azure terms I know and mapped to the AWS equivalents.
+
+| Concern | What I'd use on Azure | AWS equivalent |
+|---|---|---|
+| Compute | Container Apps (or AKS if the team already runs Kubernetes) | ECS on Fargate (or EKS) |
+| Incoming activities | Service Bus | SQS, with a dead-letter queue |
+| Database | Azure Database for PostgreSQL | RDS for PostgreSQL (Multi-AZ) |
+| Secrets | Key Vault | Secrets Manager |
+| Container images | Container Registry | ECR |
+| Monitoring and alerts | Azure Monitor | CloudWatch |
+
+![AWS architecture](docs/architecture.svg)
+
+**Compute.** I'd run the service on ECS with Fargate, which runs containers without a cluster to
+manage. For a single service that's simpler and cheaper than Kubernetes. If the organisation
+already runs Kubernetes, I'd use EKS instead to stay consistent with the platform. ECS keeps at least
+two copies (tasks) running, spread across Availability Zones behind an Application Load Balancer.
+The load balancer only sends traffic to tasks whose `/health/ready` check passes, and ECS replaces
+tasks whose `/health/live` check fails. If one zone goes down, the tasks in the other zones keep
+serving.
+
+**Ingestion.** In production I'd replace direct HTTP ingestion with an SQS queue. With HTTP, an
+activity sent while the service or database is down is lost unless the sender retries. With a queue,
+messages wait until the service is healthy again and are then processed. Messages that keep failing
+go to a dead-letter queue for investigation. The consumer can be a small worker using the AWS SDK, or
+a messaging library such as MassTransit (subject to its licence terms), and it calls the same upsert
+as the HTTP endpoint. SQS can deliver a message more than once, which is safe because the upsert
+ignores duplicates and older versions. Ingestion becomes asynchronous, so an activity reaches the
+statement a few seconds after it's queued rather than immediately; the delay metric from Task 2
+measures exactly that.
+
+**Database.** A managed PostgreSQL instance (RDS, Multi-AZ). AWS handles patching, backups and
+failover to a standby in another zone, and access is restricted to the service's network.
+
+**Releases and migrations.**
+- One Docker image is built once, tested in dev, and promoted unchanged through each environment to
+  production.
+- CI runs the build, the integration tests and smoke tests on every change.
+- Database migrations run as a separate pipeline step before the new version is deployed. Migrations
+  are written to be backward compatible, so the old and new versions can both run while tasks are
+  replaced. Startup migrations are only switched on in development.
+- Deployments are rolling: new tasks must pass their health checks before old ones stop, and the ECS
+  deployment circuit breaker rolls back a release that keeps failing.
+
+**Configuration and secrets.** Settings come from environment variables per environment. The database
+connection string and other secrets live in Secrets Manager, never in the image or the repository.
+
+**Common failure modes.**
+- Database down: `/health/ready` fails, so tasks leave the load balancer, while activities wait in the
+  queue and are processed when the database is back.
+- A bad release: health checks fail during the rollout, so it stops and is rolled back.
+- Upstream sending late: the delay metric rises and the delay alert fires (see Task 2).
+
+**Capacity.** Peaks of a few thousand activities per hour average around one per second, which a
+single task handles easily. I'd run at least two tasks for availability, with ECS Service Auto
+Scaling on CPU and on SQS queue depth, so bursts are absorbed by the queue rather than dropped. The
+database's connection limit is the main constraint as tasks are added, so I'd keep each task's
+connection pool small.
 
 ## Trade-offs and what I chose not to build
 
