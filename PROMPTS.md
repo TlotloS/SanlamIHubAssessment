@@ -103,3 +103,22 @@ Prompt 7. Should I add swagger for ease of use? Quickly add it.
    project already generated, then example values and a short description for every input
    using XML doc comments. The example statement window matches the example activity, so
    a reviewer can run the POST and then the GET and see a real total straight away.
+
+Prompt 8. Add minimal ingestion metrics for Task 2, so an operator can answer "Is it working?
+   How fast? What broke?". Keep it as simple as possible.
+   - An IngestMetrics singleton counting created, updated, ignored and failed, plus the
+     last processing delay in seconds (save time minus occurredAt).
+   - Use Interlocked for the counters, since requests run at the same time.
+   - Show it as plain JSON at GET /metrics.
+   - In ActivitiesController, call metrics.Saved(outcome, delay) after the upsert. If the
+     upsert throws, call metrics.Failed() and rethrow, but don't count a cancelled request.
+   - Add the delay to the existing activity log line. Keep it out of the API response.
+   - No tests: I'll verify by hand (new, duplicate, newer version, database stopped).
+
+   Decisions I made before this prompt: no custom correlation ID middleware, because the
+   built-in W3C TraceId is already on every log line; no tests for observability, because
+   the automated tests focus on the correctness rules; and a single "last delay" number
+   rather than percentiles, to keep it simple.
+
+   What I checked: new, duplicate, newer version, then stopped the database and posted again.
+   /metrics showed created 1, ignored 1, updated 1, failed 1.

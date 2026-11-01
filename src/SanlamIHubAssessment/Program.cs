@@ -12,6 +12,7 @@ builder.Services.AddOpenApi();
 builder.Services.AddDatabase(builder.Configuration);
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<ActivityRepository>();
+builder.Services.AddSingleton<IngestMetrics>();
 builder.Services.AddHealthChecks()
     .AddCheck<DatabaseHealthCheck>("database", tags: ["ready"]);
 
@@ -37,6 +38,9 @@ app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => fa
 // Readiness check - this answer the question : can this instance do useful work? When the database is unreachable the load balancer
 // stops sending it traffic until it recovers.
 app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") });
+
+// Ingestion counts and the latest lag, as plain JSON for local viewing.
+app.MapGet("/metrics", (IngestMetrics metrics) => metrics.Snapshot());
 
 app.MapControllers();
 
