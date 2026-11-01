@@ -23,6 +23,9 @@ await app.ApplyMigrationsAsync();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+
+    // Browsable API page at /swagger, built from the OpenAPI document above. Development only.
+    app.UseSwaggerUI(options => options.SwaggerEndpoint("/openapi/v1.json", "IHub Activity API"));
 }
 
 app.UseAuthorization();
