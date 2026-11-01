@@ -5,9 +5,9 @@ using Testcontainers.PostgreSql;
 namespace SanlamIHubAssessment.Tests.Infrastructure;
 
 /// <summary>
-/// Starts one real Postgres container and one in-memory API host for the whole test run.
-/// Real Postgres (not a mock or the EF in-memory provider) because the correctness rules
-/// live in SQL: the primary key, ON CONFLICT and row locking.
+/// Starts one Postgres container and one in-memory API host, shared by all tests.
+/// It's a real database rather than a mock or the EF in-memory provider, because the rules being
+/// tested (the primary key, ON CONFLICT and row locking) only exist in Postgres.
 /// </summary>
 public sealed class ApiFixture : IAsyncLifetime
 {
@@ -23,7 +23,7 @@ public sealed class ApiFixture : IAsyncLifetime
 
         Factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
-            // Development applies migrations on startup, so the schema matches the current model.
+            // Development applies migrations on startup, so the container gets the current schema.
             builder.UseEnvironment("Development");
             builder.UseSetting("ConnectionStrings:Default", ConnectionString);
         });
@@ -38,8 +38,8 @@ public sealed class ApiFixture : IAsyncLifetime
     }
 }
 
-// The database is shared and never reset between tests, so each test must use its own
-// identifiers rather than assume an empty table.
+// Tests share the database and it is never cleared, so each test has to use its own IDs
+// and can't assume the table is empty.
 [CollectionDefinition(Name)]
 public sealed class ApiCollection : ICollectionFixture<ApiFixture>
 {

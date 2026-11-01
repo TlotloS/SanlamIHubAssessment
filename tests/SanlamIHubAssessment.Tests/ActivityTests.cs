@@ -4,11 +4,11 @@ using SanlamIHubAssessment.Tests.Infrastructure;
 
 namespace SanlamIHubAssessment.Tests;
 
-// The contract under test is documented in SOLUTION.md (Task 1).
+// Tests the Task 1 API described in SOLUTION.md.
 [Collection(ApiCollection.Name)]
 public sealed class ActivityTests(ApiFixture fixture)
 {
-    // A fixed day in the past keeps the tests deterministic and clear of the "no future dates" rule.
+    // A fixed date in the past, so results don't depend on today's date and never hit the future-date check.
     private static readonly DateTimeOffset WindowStart = new(2026, 10, 1, 0, 0, 0, TimeSpan.Zero);
     private static readonly DateTimeOffset WindowEnd = WindowStart.AddDays(1);
     private static readonly DateTimeOffset InWindow = WindowStart.AddHours(9);
@@ -80,7 +80,7 @@ public sealed class ActivityTests(ApiFixture fixture)
     {
         var intermediaryId = NewIntermediaryId();
 
-        // Versions 1..20 sent at once in random order; amount = version x 5, so v20 must win with 100.
+        // Sends versions 1 to 20 at once, in random order. Amount is version x 5, so version 20 should win with 100.
         await Task.WhenAll(Enumerable.Range(1, 20)
             .OrderBy(_ => Random.Shared.Next())
             .Select(v => PostActivity(NewActivity(intermediaryId, "C-1", version: v, amount: v * 5m))));
@@ -109,11 +109,13 @@ public sealed class ActivityTests(ApiFixture fixture)
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
-    // The database is shared across tests and never reset, so every test gets its own intermediary.
+    // Tests share one database that is never cleared, so each test uses its own intermediary.
     private static string NewIntermediaryId() => $"BRK-{Guid.NewGuid():N}";
 
+    // (source, externalId) is unique across all intermediaries, so external IDs get the test's intermediary as a
+    // prefix. Without it, "A-1" in one test would count as a resubmission of "A-1" from another test.
     private static ActivityRequest NewActivity(string intermediaryId, string externalId, long version, decimal amount) =>
-        new("test-source", externalId, version, intermediaryId, "commission", InWindow, amount, "ZAR");
+        new("test-source", $"{intermediaryId}/{externalId}", version, intermediaryId, "commission", InWindow, amount, "ZAR");
 
     private async Task<ActivityResponse> PostActivity(ActivityRequest activity)
     {
@@ -138,7 +140,8 @@ public sealed class ActivityTests(ApiFixture fixture)
         Assert.Equal(expectedCount, zar.ActivityCount);
     }
 
-    // Test-side copies of the API contract, so the tests describe the HTTP shape rather than API internals.
+    // The tests keep their own copies of the request and response shapes, so they check the HTTP contract
+    // and not the API's internal classes.
     private sealed record ActivityRequest(
         string Source, string ExternalId, long Version, string IntermediaryId,
         string ActivityType, DateTimeOffset OccurredAt, decimal Amount, string Currency);

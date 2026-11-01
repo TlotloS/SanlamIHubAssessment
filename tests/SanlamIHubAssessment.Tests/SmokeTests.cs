@@ -6,7 +6,7 @@ using SanlamIHubAssessment.Tests.Infrastructure;
 
 namespace SanlamIHubAssessment.Tests;
 
-// Proves the test plumbing works before any business tests exist.
+// Checks the test setup itself: the API starts and talks to the container database.
 [Collection(ApiCollection.Name)]
 public sealed class SmokeTests(ApiFixture fixture)
 {
@@ -24,7 +24,7 @@ public sealed class SmokeTests(ApiFixture fixture)
         using var scope = fixture.Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        // Guards against silently testing against a local/compose Postgres instead of the container.
+        // Makes sure the tests aren't accidentally running against a local or docker-compose Postgres.
         Assert.Equal(fixture.ConnectionString, db.Database.GetConnectionString());
         Assert.True(await db.Database.CanConnectAsync());
     }
