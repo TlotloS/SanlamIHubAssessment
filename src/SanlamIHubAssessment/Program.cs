@@ -8,6 +8,8 @@ builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddDatabase(builder.Configuration);
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddScoped<ActivityRepository>();
 
 var app = builder.Build();
 
@@ -25,5 +27,5 @@ app.MapControllers();
 
 app.Run();
 
-// Lets the integration tests host the API via WebApplicationFactory<Program>.
+// Makes Program visible to WebApplicationFactory<Program> in the integration tests.
 public partial class Program;
