@@ -93,7 +93,39 @@ Prompt 6. Write failing integration tests for the Task 1 rules in SOLUTION.md, b
    What I checked: I worked out each expected total by hand. For example, versions 3, 1, 2
    arriving in that order should leave 250, because version 3 is the newest.
 
-Prompt 7. Should I add swagger for ease of use? Quickly add it.
+Prompt 7. Make the failing tests pass: Activity entity and EF configuration, the initial
+   migration, POST /activities with the upsert, then the statement endpoint.)
+
+   What the AI did: added the entity, configuration and migration, a repository with the
+   upsert as one raw SQL statement (INSERT ... ON CONFLICT ... WHERE version is higher), and
+   the two controllers. The tests caught three problems on the way to green:
+   - [Range] on the amount parsed its limits using my machine's culture (comma decimal
+     separator) and crashed every request. Moved the check into code.
+   - The tests reused external IDs like "A-1" across tests, so a "new" activity in one test
+     was a resubmission from another. The API was right; the tests were scoped per
+     intermediary.
+   - An OrderBy that EF couldn't translate to SQL. Moved it before the projection.
+
+   Follow-ups I asked for:
+   - Use Models instead of Contracts
+   - Is there an easier way to define the currency than a regular expression? I want easy to
+     read data, and for now I'll only use ZAR. (Now [AllowedValues("ZAR")].)
+   - How can you simplify the upsert for ease of reading? (Numbered SQL comments for each step,
+     and plain if statements instead of a list pattern.)
+
+   What I checked: all tests green, and ran the concurrency tests several times to make sure
+   they weren't passing by luck.
+
+Prompt 8. Let's begin by adding the health checks.
+
+   What the AI did: /health/live (process is up, checks nothing else) and /health/ready (can
+   reach the database, with a 2-second timeout).
+
+   What I checked: in Docker with the database up and then stopped. Ready went from 200 to 503,
+   live stayed 200, so a database outage takes instances out of the load balancer without
+   restarting them.
+
+Prompt 9. Should I add swagger for ease of use? Quickly add it.
    Follow-up, after typing a date in the wrong format on the statement endpoint: I want all
    the input fields to have placeholders, e.g. { "source": "test-1", "externalId": "001",
    "version": 1, "intermediaryId": "insurance-001", "activityType": "insurance",
@@ -104,7 +136,7 @@ Prompt 7. Should I add swagger for ease of use? Quickly add it.
    using XML doc comments. The example statement window matches the example activity, so
    a reviewer can run the POST and then the GET and see a real total straight away.
 
-Prompt 8. Add minimal ingestion metrics for Task 2, so an operator can answer "Is it working?
+Prompt 10. Add minimal ingestion metrics for Task 2, so an operator can answer "Is it working?
    How fast? What broke?". Keep it as simple as possible.
    - An IngestMetrics singleton counting created, updated, ignored and failed, plus the
      last processing delay in seconds (save time minus occurredAt).
@@ -122,3 +154,45 @@ Prompt 8. Add minimal ingestion metrics for Task 2, so an operator can answer "I
 
    What I checked: new, duplicate, newer version, then stopped the database and posted again.
    /metrics showed created 1, ignored 1, updated 1, failed 1.
+
+   Follow-up: Simplify the IngestMetrics for readability
+
+Prompt 11. Reword this for me? (written in Azure terms:)
+
+   > Despite not being to familiar with AWS, I'm familiar with azure. My first inkling would be
+   > to align the infra with the current hosting strategy at hand that the team / org already use.
+   > 1) I would host it on AKS as this would allow for scalability as the platform grows under
+   >    load, spinning up multiple instances so load is distributed across pods, taking advantage
+   >    of the load balancer and readiness checks, along with high availability.
+   > 2) From an activity ingestion perspective, I'd use RabbitMQ / Service Bus with MassTransit,
+   >    which creates a queue as opposed to HTTP, so activities are kept when the system is down
+   >    and consumption resumes once it's back up.
+   > 3) I would host the database on a managed instance.
+   > 4) Rollout: run the DB migration before deploying the service, automated in the CD pipeline.
+   > A single Docker image deployed in dev, tested and promoted across all environments to
+   > production. Automated smoke tests, CI build and integration tests. Alerts when health checks
+   > fail. Secrets in a key vault. Autoscaling.
+   > All of these using the equivalent infrastructure for AWS.
+
+   Follow-ups: Do you agree with all this? (AI challenged EKS as heavy for one small service,
+   flagged checking MassTransit's licence, and noted that a queue makes ingestion asynchronous.)
+   What is ECS? Does it allow for HA, e.g. multiple pods? Okay perfect, then update it.
+   Should I not mention how I would manage statements and metrics? Maybe generate a proper
+   diagram as well.
+
+   What I decided: ECS on Fargate as the default, EKS if the organisation already runs
+   Kubernetes. A neutral SQS consumer (AWS SDK or MassTransit, licence permitting) that calls
+   the same upsert.
+
+   What the AI did: reworded my plan, added an Azure to AWS mapping table, capacity and failure
+   mode notes, and drew docs/architecture.svg.
+
+Prompt 12. Complete the remaining SOLUTION.md sections and create the README.
+
+   What the AI did: wrote "how I guarantee correct totals" (with a table mapping each rule to
+   its test), growth to more activity types and sources, the Task 2 observability section
+   (signals, two alerts with thresholds and operator actions), and the trade-offs. Fixed small
+   errors (typo, ZAR only, a traceId claim that was only true for validation errors). Created
+   README.md with run instructions, URLs, curl examples and things to try.
+
+   What I checked: ran every README step against Docker and the tests.
