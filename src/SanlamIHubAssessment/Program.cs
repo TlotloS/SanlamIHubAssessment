@@ -24,3 +24,6 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+// Lets the integration tests host the API via WebApplicationFactory<Program>.
+public partial class Program;
