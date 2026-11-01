@@ -14,21 +14,25 @@ public record CurrencyTotalRow(string Currency, decimal GrossAmount, long Activi
 public class ActivityRepository(AppDbContext db)
 {
     /// <summary>
-    /// Inserts the activity, or overwrites the stored row when this version is newer, in a single SQL statement.
-    /// A duplicate or older version fails the WHERE clause and changes nothing. Postgres makes concurrent writes
-    /// to the same key wait on the primary key, so the app doesn't need its own locking.
-    /// This is the only raw SQL in the project. EF Core has no conditional upsert, and reading first and then
-    /// calling SaveChanges would race under concurrent requests.
-    /// RETURNING produces no row when the update is skipped, and xmax = 0 means the row was just inserted.
+    /// Saves the activity, or replaces the stored one if this version is newer, in a single database command.
+    /// Doing the check and the save together means duplicates, late arrivals and simultaneous requests
+    /// can't cause double counting.
+    ///
+    /// (EF Core can't do this in one step, so this uses SQL directly.)
     /// </summary>
     public async Task<UpsertOutcome> UpsertAsync(Activity activity, CancellationToken ct)
     {
         var occurredAt = activity.OccurredAt.ToUniversalTime();
 
-        var inserted = await db.Database.SqlQuery<bool>($"""
+        // Returns [true] if inserted, [false] if updated, or an empty list if nothing changed.
+        // The column must be named "Value" because EF Core's SqlQuery<bool> reads that name.
+        var savedRows = await db.Database.SqlQuery<bool>($"""
+            -- 1. Try to insert the activity as new.
             INSERT INTO activity (source, external_id, version, intermediary_id, activity_type, occurred_at, amount, currency)
             VALUES ({activity.Source}, {activity.ExternalId}, {activity.Version}, {activity.IntermediaryId},
                     {activity.ActivityType}, {occurredAt}, {activity.Amount}, {activity.Currency})
+
+            -- 2. If it already exists, overwrite it with the new values...
             ON CONFLICT (source, external_id) DO UPDATE SET
                 version         = EXCLUDED.version,
                 intermediary_id = EXCLUDED.intermediary_id,
@@ -37,16 +41,20 @@ public class ActivityRepository(AppDbContext db)
                 amount          = EXCLUDED.amount,
                 currency        = EXCLUDED.currency,
                 updated_at      = now()
+
+            -- 3. ...but only when the incoming version is newer. Duplicates and older versions change nothing.
             WHERE activity.version < EXCLUDED.version
+
+            -- 4. Report whether the row was inserted (true) or updated (false). xmax is a Postgres system
+            --    column that is 0 on a freshly inserted row.
             RETURNING (xmax = 0) AS "Value"
             """).ToListAsync(ct);
 
-        return inserted switch
-        {
-            [] => UpsertOutcome.Ignored,
-            [true] => UpsertOutcome.Created,
-            _ => UpsertOutcome.Updated
-        };
+        if (savedRows.Count == 0)
+            return UpsertOutcome.Ignored;
+
+        var wasInserted = savedRows[0];
+        return wasInserted ? UpsertOutcome.Created : UpsertOutcome.Updated;
     }
 
     /// <summary>Totals per currency for [from, to), using the latest version of each activity.</summary>
