@@ -1,0 +1,1 @@
+1. I've genereated a .NET 10 web api via rider scaffold the project, with PostgreSQL 16, EF Core + Npgsql, with automigrations by default, the auto migrations will by default only in dev , configuration in appsettings, leave the test enpoint for now, everyghin esle is purelys scalldging with basic json console logging.
