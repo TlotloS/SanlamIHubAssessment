@@ -5,6 +5,10 @@
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+        <!-- XML doc comments feed the descriptions and examples shown in Swagger. -->
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <!-- Don't warn about public members without doc comments. -->
+        <NoWarn>$(NoWarn);CS1591</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>

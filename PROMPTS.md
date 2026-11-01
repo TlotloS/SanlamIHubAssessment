@@ -92,3 +92,14 @@ Prompt 6. Write failing integration tests for the Task 1 rules in SOLUTION.md, b
 
    What I checked: I worked out each expected total by hand. For example, versions 3, 1, 2
    arriving in that order should leave 250, because version 3 is the newest.
+
+Prompt 7. Should I add swagger for ease of use? Quickly add it.
+   Follow-up, after typing a date in the wrong format on the statement endpoint: I want all
+   the input fields to have placeholders, e.g. { "source": "test-1", "externalId": "001",
+   "version": 1, "intermediaryId": "insurance-001", "activityType": "insurance",
+   "occurredAt": "2026-11-02T04:12:20.217Z", "amount": 500, "currency": "ZAR" }
+
+   What the AI did: added Swagger UI (development only) on top of the OpenAPI document the
+   project already generated, then example values and a short description for every input
+   using XML doc comments. The example statement window matches the example activity, so
+   a reviewer can run the POST and then the GET and see a real total straight away.
