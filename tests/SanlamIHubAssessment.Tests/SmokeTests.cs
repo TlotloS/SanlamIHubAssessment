@@ -11,7 +11,7 @@ namespace SanlamIHubAssessment.Tests;
 public sealed class SmokeTests(ApiFixture fixture)
 {
     [Fact]
-    public async Task Api_starts_and_serves_requests()
+    public async Task GetWeatherForecast_ApiStarted_ReturnsOk()
     {
         var response = await fixture.Client.GetAsync("/weatherforecast");
 
@@ -19,7 +19,7 @@ public sealed class SmokeTests(ApiFixture fixture)
     }
 
     [Fact]
-    public async Task Api_uses_the_test_container_database()
+    public async Task AppDbContext_ResolvedFromApi_UsesTestContainerDatabase()
     {
         using var scope = fixture.Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
