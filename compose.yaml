@@ -1,0 +1,7 @@
+﻿services:
+  sanlamihubassessment:
+    image: sanlamihubassessment
+    build:
+      context: .
+      dockerfile: Dockerfile
+
